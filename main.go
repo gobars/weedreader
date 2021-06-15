@@ -1,102 +1,80 @@
 package main
 
 import (
+	"embed"
+	"flag"
 	"fmt"
-	"github.com/chrislusf/seaweedfs/weed/filer"
-	"github.com/chrislusf/seaweedfs/weed/pb/filer_pb"
+	"github.com/bingoohuang/gg/pkg/ctl"
+	"github.com/bingoohuang/golog"
 	"github.com/chrislusf/seaweedfs/weed/storage/needle"
 	"github.com/chrislusf/seaweedfs/weed/util"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gomarks/ruyi/pkg/file"
 	"log"
+	"mime"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
+const projectName = "weedreader"
+const defaultConfFile = projectName + ".yml"
+
+var CONFIG *Config
+
+//go:embed initassets
+var initAssets embed.FS
+
 func main() {
-	//dir := "/dir_李标测试/子目录"
-	//fileName := "测试机密的图片_rename.png"
+	prepare()
+	// MySQL 数据源
+	InitDataSource()
 
-	//dir := "/dir_李标测试/子目录2"
-	//fileName := "Nginx"
-
-	dir := "/dir_李标测试/子目录3"
-	fileName := "MSSM-Auth-server.zip"
-
-	entry, finalData, err := ReadFile(dir, fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	newFileName := time.Now().String() + entry.FullPath.Name()
-	writeToFile(newFileName, finalData)
-
-	// 3,13bfdd152e.png
-	fid, _ := needle.ParseFileIdFromString("3,13bfdd152e.png")
-	n, err := Needle(fid)
-	writeToFile(fid.String(), n.Data)
+	// 读 filer 加密文件案例
+	filerDemo()
+	// 读 fid 文件案例
+	fidDemo()
 }
 
-func ReadFile(dir string, fileName string) (*filer.Entry, []byte, error) {
-	// Read file meta information from MySQL
-	entry, err := FindDataEntry(dir, fileName)
-	if err != nil {
-		log.Printf("FindDataEntry error: %v", err)
-		return entry, nil, err
+func fidDemo() {
+	// 读 fid 文件案例
+	for _, fidStr := range []string{"3,13bfdd152e", "4,1406cde3d0"} {
+		fid, _ := needle.ParseFileIdFromString(fidStr)
+		n, _ := Needle(fid)
+		log.Println(mime.TypeByExtension(strings.ToLower(filepath.Ext(string(n.Name)))))
+		writeToFile("./tmp/"+time.Now().String()+fid.String()+string(n.Name), n.Data)
 	}
-	// According to file meta, read files from idx and read files from dat files
-	finalData, err := ReadFileData(entry)
-	if err != nil {
-		log.Printf("ReadFileData error: %v", err)
-		return entry, nil, err
-	}
-	return entry, finalData, nil
 }
 
-// ReadFileData According to file meta, read files from idx and read files from dat files
-func ReadFileData(entry *filer.Entry) ([]byte, error) {
-	var finalData []byte
-	for _, chunk := range entry.Chunks {
-		parts, err := DataFromVolumeFile(chunk)
+func filerDemo() {
+
+	arr := []util.FullPath{util.NewFullPath("/dir_李标测试/子目录", "测试机密的图片_rename.png"),
+		util.NewFullPath("/dir_李标测试/子目录2", "Nginx"),
+		util.NewFullPath("/dir_李标测试/子目录3", "MSSM-Auth-server.zip")}
+
+	for _, f := range arr {
+		entry, finalData, err := ReadFile(f)
 		if err != nil {
-			log.Println(err)
-			return nil, err
+			log.Fatal(err)
 		}
-		for _, b := range parts {
-			finalData = append(finalData, b)
-		}
+		writeToFile("./tmp/"+time.Now().String()+entry.FullPath.Name(), finalData)
 	}
-	return finalData, nil
+
 }
 
-// FindDataEntry Read file meta information from MySQL
-func FindDataEntry(dir string, fileName string) (*filer.Entry, error) {
-	fm, err := FindFileMeta(dir, fileName)
-	if err != nil {
-		return nil, err
-	}
-	if fm.Meta == nil {
-		return nil, fmt.Errorf("file not exist dir:%s, file name:%s", dir, fileName)
-	}
-	entry := &filer.Entry{
-		FullPath: util.NewFullPath(dir, fileName),
-	}
-	err = entry.DecodeAttributesAndChunks(util.MaybeDecompressData(fm.Meta))
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("数据为：%+v", entry)
-	return entry, nil
-}
-
-func getMaybeDecryptData(chunk *filer_pb.FileChunk, encryptData []byte) ([]byte, error) {
-	if chunk.GetCipherKey() == nil {
-		return encryptData, nil
-	}
-	// 加密的数据需要解密
-	return util.Decrypt(encryptData, chunk.GetCipherKey())
-}
-
-func writeToFile(newFileName string, finalData []byte) {
-	file.MakeSureFile(newFileName)
-	os.WriteFile(newFileName, finalData, os.ModePerm)
+func prepare() {
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	confFile := f.String("c", "", "Filename of configuration in yaml format, default to "+defaultConfFile)
+	port := f.String("p", "", "TCP ports, comma separated for multiple")
+	initing := f.Bool("init", false, "init sample weedreader.yml and then exit")
+	version := f.Bool("v", false, "show version info and exit")
+	_ = f.Parse(os.Args[1:]) // Ignore errors; f is set for ExitOnError.
+	ctl.Config{
+		Initing:      *initing,
+		PrintVersion: *version,
+		VersionInfo:  projectName + "v0.0.1 init",
+		InitFiles:    initAssets,
+	}.ProcessInit()
+	CONFIG = ParseConfFile(*confFile, *port)
+	golog.SetupLogrus(golog.Spec(fmt.Sprintf("file=.%vlogs%v%s.log", string(os.PathSeparator), string(os.PathSeparator), projectName)))
 }

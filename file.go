@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/chrislusf/seaweedfs/weed/filer"
 	"github.com/chrislusf/seaweedfs/weed/glog"
 	"github.com/chrislusf/seaweedfs/weed/pb/filer_pb"
 	"github.com/chrislusf/seaweedfs/weed/storage"
@@ -10,6 +11,7 @@ import (
 	"github.com/chrislusf/seaweedfs/weed/storage/super_block"
 	"github.com/chrislusf/seaweedfs/weed/storage/types"
 	"github.com/chrislusf/seaweedfs/weed/util"
+	"github.com/gomarks/ruyi/pkg/file"
 	"log"
 	"os"
 	"path"
@@ -87,4 +89,68 @@ func NeedleOffsetAndSizeFromIdx(fixVolumeId, fixVolumeCollection, fixVolumePath 
 		return nil
 	})
 	return _offset, _size, err
+}
+func ReadFile(fullPath util.FullPath) (*filer.Entry, []byte, error) {
+	// Read file meta information from MySQL
+	entry, err := FindDataEntry(fullPath)
+	if err != nil {
+		log.Printf("FindDataEntry error: %v", err)
+		return entry, nil, err
+	}
+	// According to file meta, read files from idx and read files from dat files
+	finalData, err := ReadFileData(entry)
+	if err != nil {
+		log.Printf("ReadFileData error: %v", err)
+		return entry, nil, err
+	}
+	return entry, finalData, nil
+}
+
+// ReadFileData According to file meta, read files from idx and read files from dat files
+func ReadFileData(entry *filer.Entry) ([]byte, error) {
+	var finalData []byte
+	for _, chunk := range entry.Chunks {
+		parts, err := DataFromVolumeFile(chunk)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		for _, b := range parts {
+			finalData = append(finalData, b)
+		}
+	}
+	return finalData, nil
+}
+
+// FindDataEntry Read file meta information from MySQL
+func FindDataEntry(fullPath util.FullPath) (*filer.Entry, error) {
+	fm, err := FindFileMeta(fullPath.DirAndName())
+	if err != nil {
+		return nil, err
+	}
+	if fm.Meta == nil {
+		return nil, fmt.Errorf("file not exist fullPath:%v", fullPath)
+	}
+	entry := &filer.Entry{
+		FullPath: fullPath,
+	}
+	err = entry.DecodeAttributesAndChunks(util.MaybeDecompressData(fm.Meta))
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("数据为：%+v", entry)
+	return entry, nil
+}
+
+func getMaybeDecryptData(chunk *filer_pb.FileChunk, encryptData []byte) ([]byte, error) {
+	if chunk.GetCipherKey() == nil {
+		return encryptData, nil
+	}
+	// 加密的数据需要解密
+	return util.Decrypt(encryptData, chunk.GetCipherKey())
+}
+
+func writeToFile(newFileName string, finalData []byte) {
+	file.MakeSureFile(newFileName)
+	os.WriteFile(newFileName, finalData, os.ModePerm)
 }

@@ -16,9 +16,8 @@ type FileMeta struct {
 
 var db *sql.DB
 
-func init() {
-	dsn := "weed_cluster_0:weed_cluster_0@tcp(beta.isignet.cn:32655)/weed_cluster_0"
-	d, err := sql.Open("mysql", dsn)
+func InitDataSource() {
+	d, err := sql.Open("mysql", CONFIG.MysqlDSN)
 	if err != nil {
 		log.Fatal(err)
 	}
