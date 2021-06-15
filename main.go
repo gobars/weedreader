@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/chrislusf/seaweedfs/weed/filer"
 	"github.com/chrislusf/seaweedfs/weed/pb/filer_pb"
+	"github.com/chrislusf/seaweedfs/weed/storage/needle"
 	"github.com/chrislusf/seaweedfs/weed/util"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gomarks/ruyi/pkg/file"
@@ -29,6 +30,10 @@ func main() {
 	newFileName := time.Now().String() + entry.FullPath.Name()
 	writeToFile(newFileName, finalData)
 
+	// 3,13bfdd152e.png
+	fid, _ := needle.ParseFileIdFromString("3,13bfdd152e.png")
+	n, err := Needle(fid)
+	writeToFile(fid.String(), n.Data)
 }
 
 func ReadFile(dir string, fileName string) (*filer.Entry, []byte, error) {
@@ -49,7 +54,6 @@ func ReadFile(dir string, fileName string) (*filer.Entry, []byte, error) {
 
 // ReadFileData According to file meta, read files from idx and read files from dat files
 func ReadFileData(entry *filer.Entry) ([]byte, error) {
-
 	var finalData []byte
 	for _, chunk := range entry.Chunks {
 		parts, err := DataFromVolumeFile(chunk)

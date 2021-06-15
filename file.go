@@ -22,12 +22,18 @@ func FileId(chunk *filer_pb.FileChunk) *needle.FileId {
 }
 
 func DataFromVolumeFile(chunk *filer_pb.FileChunk) ([]byte, error) {
-	volumeId := chunk.Fid.GetVolumeId()
-	volumeCollection, volumeServerDir := VolumeCollectionAndDir(volumeId)
-
 	fileId := FileId(chunk)
-	log.Println("fileId: ", fileId)
+	n, err := Needle(fileId)
+	if err != nil {
+		return nil, err
+	}
+	data := n.Data
+	return getMaybeDecryptData(chunk, data)
+}
 
+func Needle(fileId *needle.FileId) (*needle.Needle, error) {
+	log.Println("fileId: ", fileId)
+	volumeCollection, volumeServerDir := VolumeCollectionAndDir(fileId.GetVolumeId().String())
 	// Needle Index
 	needleId := fileId.GetNeedleId()
 	offset, size, err := NeedleOffsetAndSizeFromIdx(fileId.GetVolumeId().String(), volumeCollection, volumeServerDir, needleId)
@@ -54,8 +60,7 @@ func DataFromVolumeFile(chunk *filer_pb.FileChunk) ([]byte, error) {
 		log.Printf("read needle data:%v", err)
 		return nil, err
 	}
-	data := n.Data
-	return getMaybeDecryptData(chunk, data)
+	return n, nil
 }
 
 func NeedleOffsetAndSizeFromIdx(fixVolumeId, fixVolumeCollection, fixVolumePath string, targetNeedleId types.NeedleId) (types.Offset, types.Size, error) {

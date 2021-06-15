@@ -68,12 +68,12 @@ func volStatus() []VolumeStatus {
 	return mvs
 }
 
-func VolumeCollectionAndDir(volumeId uint32) (string, string) {
+func VolumeCollectionAndDir(volumeId string) (string, string) {
 	var volumeCollection string
 	var volumeServerDir string
 	for _, vs := range mvs {
 		for _, vol := range vs.Volumes {
-			if strconv.FormatInt(int64(vol.Id), 10) == strconv.FormatInt(int64(volumeId), 10) {
+			if strconv.FormatInt(int64(vol.Id), 10) == volumeId {
 				volumeCollection = vol.Collection
 				volumeServerDir = vs.DiskStatuses[0].Dir
 			}
