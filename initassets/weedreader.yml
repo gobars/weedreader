@@ -2,3 +2,38 @@ mysqlDsn:
   weed_cluster_0:weed_cluster_0@tcp(beta.isignet.cn:32655)/weed_cluster_0
 port:
   12000
+
+mvs:
+  - DiskStatuses:
+      - dir: /Users/anan/Downloads/weed/data/v1
+    Volumes:
+      - Id: 1
+        Collection: ''
+      - Id: 2
+        Collection: ''
+  - DiskStatuses:
+      - dir: /Users/anan/Downloads/weed/data/v2
+    Volumes:
+      - Id: 1
+        Collection: ''
+      - Id: 3
+        Collection: ''
+      - Id: 4
+        Collection: ''
+      - Id: 5
+        Collection: ''
+      - Id: 6
+        Collection: ''
+  - DiskStatuses:
+      - dir: /Users/anan/Downloads/weed/data/v3
+    Volumes:
+      - Id: 2
+        Collection: ''
+      - Id: 3
+        Collection: ''
+      - Id: 4
+        Collection: ''
+      - Id: 5
+        Collection: ''
+      - Id: 6
+        Collection: ''

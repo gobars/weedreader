@@ -10,8 +10,9 @@ import (
 )
 
 type Config struct {
-	MysqlDSN string `yaml:"mysqlDSN"`
-	Port     string `yaml:"prepare"`
+	MysqlDSN string         `yaml:"mysqlDSN"`
+	Port     string         `yaml:"prepare"`
+	MVS      []VolumeStatus `multiple volume status. yaml:"mvs"`
 }
 
 // UnmarshalConfFile parses the CONFIG yaml file.
