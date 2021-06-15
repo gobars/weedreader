@@ -1,0 +1,4 @@
+mysqlDsn:
+  weed_cluster_0:weed_cluster_0@tcp(beta.isignet.cn:32655)/weed_cluster_0
+port:
+  12000
