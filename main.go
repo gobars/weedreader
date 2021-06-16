@@ -48,9 +48,13 @@ func fidDemo() {
 
 func filerDemo() {
 
-	arr := []util.FullPath{util.NewFullPath("/dir_李标测试/子目录", "测试机密的图片_rename.png"),
-		util.NewFullPath("/dir_李标测试/子目录2", "Nginx"),
-		util.NewFullPath("/dir_李标测试/子目录3", "MSSM-Auth-server.zip")}
+	arr := []util.FullPath{
+		util.FullPath("/buckets/b_test/1.png"),
+		//util.NewFullPath("/", "1.png"),
+		//util.NewFullPath("/dir_李标测试/子目录", "测试机密的图片_rename.png"),
+		//util.NewFullPath("/dir_李标测试/子目录2", "Nginx"),
+		//util.NewFullPath("/dir_李标测试/子目录3", "MSSM-Auth-server.zip")
+	}
 
 	for _, f := range arr {
 		entry, finalData, err := ReadFile(f)

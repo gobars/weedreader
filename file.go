@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 func FileId(chunk *filer_pb.FileChunk) *needle.FileId {
@@ -123,16 +124,18 @@ func ReadFileData(entry *filer.Entry) ([]byte, error) {
 }
 
 // FindDataEntry Read file meta information from MySQL
-func FindDataEntry(fullPath util.FullPath) (*filer.Entry, error) {
-	fm, err := FindFileMeta(fullPath.DirAndName())
+func FindDataEntry(fp util.FullPath) (*filer.Entry, error) {
+	buckets, fullPath := DetectBuckets(fp)
+	dir, name := fullPath.DirAndName()
+	fm, err := FindFileMeta(buckets, dir, name)
 	if err != nil {
 		return nil, err
 	}
 	if fm.Meta == nil {
-		return nil, fmt.Errorf("file not exist fullPath:%v", fullPath)
+		return nil, fmt.Errorf("file not exist fp:%v", fp)
 	}
 	entry := &filer.Entry{
-		FullPath: fullPath,
+		FullPath: fp,
 	}
 	err = entry.DecodeAttributesAndChunks(util.MaybeDecompressData(fm.Meta))
 	if err != nil {
@@ -153,4 +156,20 @@ func getMaybeDecryptData(chunk *filer_pb.FileChunk, encryptData []byte) ([]byte,
 func writeToFile(newFileName string, finalData []byte) {
 	file.MakeSureFile(newFileName)
 	os.WriteFile(newFileName, finalData, os.ModePerm)
+}
+
+func DetectBuckets(fp util.FullPath) (string, util.FullPath) {
+	// detect bucket
+	bucketAndObjectKey := string(fp)[len("/buckets/"):]
+	if bucketAndObjectKey == string(fp) {
+		return "", fp
+	}
+	t := strings.Index(bucketAndObjectKey, "/")
+	bucket := bucketAndObjectKey
+	shortPath := util.FullPath("/")
+	if t > 0 {
+		bucket = bucketAndObjectKey[:t]
+		shortPath = util.FullPath(bucketAndObjectKey[t:])
+	}
+	return bucket, util.FullPath(shortPath)
 }
