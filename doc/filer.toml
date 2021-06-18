@@ -47,7 +47,7 @@ dir = "./filerrdb"					# directory to store rocksdb files
 #   PRIMARY KEY (dirhash, name)
 # ) DEFAULT CHARSET=utf8;
 
-enabled = true
+enabled = false
 hostname = "beta.isignet.cn"
 port = 32655
 username = "weed_cluster_0"
@@ -59,7 +59,7 @@ connection_max_lifetime_seconds = 0
 interpolateParams = false
 
 [mysql2]  # or memsql, tidb
-enabled = false
+enabled = true
 createTable = """
   CREATE TABLE IF NOT EXISTS %s (
     dirhash BIGINT, 
@@ -69,11 +69,11 @@ createTable = """
     PRIMARY KEY (dirhash, name)
   ) DEFAULT CHARSET=utf8;
 """
-hostname = "localhost"
-port = 3306
-username = "root"
-password = ""
-database = ""              # create or use an existing database
+hostname = "beta.isignet.cn"
+port = 32655
+username = "weed_cluster_0"
+password = "weed_cluster_0"
+database = "weed_cluster_0"              # create or use an existing database
 connection_max_idle = 2
 connection_max_open = 100
 connection_max_lifetime_seconds = 0
